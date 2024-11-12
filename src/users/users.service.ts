@@ -58,7 +58,7 @@ export class UsersService {
     const user = await this.findById(userId);
 
     // 닉네임 업데이트시 중복 체크
-    if (updateDto.nickname) {
+    if (updateDto.name) {
       const existingUser = await this.userRepository.findOne({
         where: { name: updateDto.name },
       });
