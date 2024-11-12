@@ -63,14 +63,14 @@ RUN mkdir -p uploads/posters uploads/tickets uploads/others \
 USER node
 
 # 헬스체크를 위한 포트
-EXPOSE 8080
+EXPOSE 80
 
 # pm2 설정 파일 생성
 COPY ecosystem.config.js .
 
 # 환경변수 설정
 ENV NODE_ENV=production \
-    PORT=8080
+    PORT=80
 
 # 컨테이너 실행 명령
 CMD ["pm2-runtime", "start", "ecosystem.config.js"]
