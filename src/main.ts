@@ -29,7 +29,11 @@ async function bootstrap() {
   });
   app.useGlobalFilters(new RoleErrorFilter());
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, document);
+  SwaggerModule.setup('api-docs', app, document, {
+    jsonDocumentUrl: 'api-docs/json',
+    explorer: true,
+    yamlDocumentUrl: 'api-docs/yaml',
+  });
   await app.listen(3000);
 }
 
