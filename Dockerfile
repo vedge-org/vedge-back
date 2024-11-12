@@ -51,6 +51,7 @@ RUN corepack enable && corepack prepare yarn@stable --activate
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/yarn.lock ./
+COPY --from=builder /app/ecosystem.config.js ./
 
 # 프로덕션 의존성만 설치
 RUN yarn install --production --frozen-lockfile
@@ -62,15 +63,9 @@ RUN mkdir -p uploads/posters uploads/tickets uploads/others \
 # node 사용자로 전환
 USER node
 
-# 헬스체크를 위한 포트
+# 포트 설정
+ENV PORT=80
 EXPOSE 80
-
-# pm2 설정 파일 생성
-COPY ecosystem.config.js .
-
-# 환경변수 설정
-ENV NODE_ENV=production \
-    PORT=80
 
 # 컨테이너 실행 명령
 CMD ["pm2-runtime", "start", "ecosystem.config.js"]
