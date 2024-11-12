@@ -34,7 +34,7 @@ async function bootstrap() {
     explorer: true,
     yamlDocumentUrl: 'api-docs/yaml',
   });
-  await app.listen(3000);
+  await app.listen(process.env.PORT || 3000);
 }
 
-bootstrap().then((r) => console.log('Server is running on http://localhost:3000'));
+bootstrap().then((r) => console.log('🎫 Vedge API Started Successfully!'));
