@@ -6,8 +6,8 @@ import { RoleErrorFilter } from './common/filters/role-error.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = new DocumentBuilder()
-    .setTitle('Vedge-Server')
-    .setDescription('The Vedge API description')
+    .setTitle('Vedge API')
+    .setDescription('암표 방지 티켓 예매 서비스 Vedge API 문서')
     .setVersion('1.0')
     .addTag('vedge')
     .addBearerAuth(
