@@ -12,8 +12,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SmsModule } from './sms/sms.module';
 import { RedisModule } from './redis/redis.module';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -31,6 +30,7 @@ import { join } from 'path';
     AuthModule,
     SmsModule,
     RedisModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
