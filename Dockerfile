@@ -26,34 +26,33 @@ FROM node:18-alpine AS production
 # 작업 디렉토리 설정
 WORKDIR /app
 
-# yarn 설치
-RUN corepack enable && corepack prepare yarn@stable --activate
-
-# PM2 전역 설치
-RUN yarn global add pm2
+# PM2 전역 설치 (npm 사용)
+RUN npm install -g pm2
 
 # 필요한 시스템 패키지 설치
 RUN apk add --no-cache \
     curl \
-    # 이미지 처리를 위한 패키지들
     jpeg-dev \
     cairo-dev \
     giflib-dev \
     pango-dev \
-    # C++ 빌드 도구
     python3 \
     make \
     g++ \
-    # 기타 유틸리티
     tzdata
 
 # 한국 시간대 설정
 ENV TZ=Asia/Seoul
 
+# yarn 설치
+RUN corepack enable && corepack prepare yarn@stable --activate
+
 # 빌드된 결과물과 필요한 파일들 복사
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/yarn.lock ./
+
+# 프로덕션 의존성만 설치
 RUN yarn install --production --frozen-lockfile
 
 # 업로드 디렉토리 생성
