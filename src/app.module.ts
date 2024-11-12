@@ -12,6 +12,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SmsModule } from './sms/sms.module';
 import { RedisModule } from './redis/redis.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -21,11 +23,7 @@ import { RedisModule } from './redis/redis.module';
       isGlobal: true,
     }),
     EventEmitterModule.forRoot(),
-
-    // 스케줄러 (배치 작업)
     ScheduleModule.forRoot(),
-
-    // 기능 모듈
     EventsModule,
     SeatsModule,
     TicketsModule,
