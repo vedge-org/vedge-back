@@ -57,7 +57,7 @@ export class AuthService {
 
       await this.smsService.sendSMS(
         phoneNumber,
-        `[Vedge]\n[인증번호: ${verificationCode}] ${type === 'register' ? '회원가입' : '로그인'} 인증번호입니다.`,
+        `[Vedge]\n${type === 'register' ? '회원가입' : '로그인'} 인증번호는 [${verificationCode}]입니다.`,
       );
 
       return { message: '인증번호가 발송되었습니다.' };

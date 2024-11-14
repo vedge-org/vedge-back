@@ -13,10 +13,10 @@ export class SmsService {
     this.messageService = new SolapiMessageService(apiKey, apiSecret);
   }
 
-  async sendSMS(to: string, verificationCode: string): Promise<any> {
+  async sendSMS(to: string, text: string): Promise<any> {
     try {
       const message = {
-        text: `[Vedge]\n인증번호는 [${verificationCode}]입니다.`,
+        text: text,
         to,
         from: this.configService.get<string>('SOLAPI_SENDER_NUMBER'),
       };
