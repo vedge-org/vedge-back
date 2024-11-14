@@ -1,12 +1,13 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SessionGuard } from 'src/auth/guards/session.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventCategory } from './entities/event.entity';
+import { Auth } from 'src/auth/decorators/auth.decorator';
 
 @ApiTags('events')
 @Controller('events')
@@ -14,9 +15,9 @@ export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(SessionGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
+  @Auth()
   @ApiOperation({ summary: '이벤트 생성' })
   @ApiResponse({ status: 201, description: '이벤트 생성 성공' })
   create(@Body() createEventDto: CreateEventDto) {
@@ -52,9 +53,9 @@ export class EventsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(SessionGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
+  @Auth()
   @ApiOperation({ summary: '이벤트 수정' })
   @ApiResponse({ status: 200, description: '이벤트 수정 성공' })
   update(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto) {
@@ -62,9 +63,9 @@ export class EventsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(SessionGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
+  @Auth()
   @ApiOperation({ summary: '이벤트 삭제' })
   @ApiResponse({ status: 200, description: '이벤트 삭제 성공' })
   remove(@Param('id') id: string) {

@@ -1,7 +1,14 @@
 import { Module, Global } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
+import { Store } from 'express-session';
+
+export class RedisStore extends Store {
+  constructor(options: { client: Redis; prefix?: string; ttl?: number }) {
+    super();
+  }
+}
 
 @Global()
 @Module({
@@ -19,8 +26,19 @@ import Redis from 'ioredis';
       },
       inject: [ConfigService],
     },
+    {
+      provide: 'SESSION_STORE',
+      useFactory: (redisClient: Redis) => {
+        return new RedisStore({
+          client: redisClient,
+          prefix: 'sess:',
+          ttl: 60 * 60, // 1 hour
+        });
+      },
+      inject: ['REDIS_CLIENT'],
+    },
     RedisService,
   ],
-  exports: [RedisService],
+  exports: ['REDIS_CLIENT', 'SESSION_STORE', RedisService],
 })
 export class RedisModule {}

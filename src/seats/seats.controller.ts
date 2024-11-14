@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Query, HttpStatus, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SessionGuard } from 'src/auth/guards/session.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles, UserRole } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -8,6 +8,7 @@ import { SeatsService } from './seats.service';
 import { CreateSeatMapDto } from './dto/create-seat-map.dto';
 import { LockSeatDto } from './dto/lock-seat.dto';
 import { User } from '../users/entities/user.entity';
+import { Auth } from 'src/auth/decorators/auth.decorator';
 
 @ApiTags('좌석')
 @Controller('seats')
@@ -15,9 +16,9 @@ export class SeatsController {
   constructor(private readonly seatsService: SeatsService) {}
 
   @Post('map')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(SessionGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
+  @Auth()
   @ApiOperation({ summary: '좌석 배치도 생성', description: '관리자가 공연장의 좌석 배치도를 생성합니다.' })
   @ApiResponse({ status: 201, description: '좌석 배치도 생성 성공' })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
@@ -54,8 +55,8 @@ export class SeatsController {
   }
 
   @Post('lock')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @UseGuards(SessionGuard)
+  @Auth()
   @ApiOperation({ summary: '좌석 임시 잠금', description: '예매 진행 중 좌석을 임시로 잠금 처리합니다.' })
   @ApiResponse({ status: 200, description: '좌석 잠금 성공' })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
@@ -78,6 +79,7 @@ export class SeatsController {
   }
 
   @Get('map/:scheduleId')
+  @Auth()
   @ApiOperation({ summary: '좌석 배치도 조회', description: '특정 공연 일정의 전체 좌석 배치도를 조회합니다.' })
   @ApiResponse({ status: 200, description: '좌석 배치도 조회 성공' })
   @ApiResponse({ status: 404, description: '일정을 찾을 수 없음' })

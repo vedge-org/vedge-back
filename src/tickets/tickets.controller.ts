@@ -12,11 +12,12 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SessionGuard } from 'src/auth/guards/session.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { TicketsService } from './tickets.service';
 import { User } from '../users/entities/user.entity';
 import { ReserveTicketDto } from './dto/reserve-ticket.dto';
+import { Auth } from 'src/auth/decorators/auth.decorator';
 
 @ApiTags('tickets')
 @Controller('tickets')
@@ -24,8 +25,8 @@ export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
   @Post('reserve')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @UseGuards(SessionGuard)
+  @Auth()
   @ApiOperation({ summary: '티켓 예매' })
   @ApiResponse({ status: 201, description: '티켓 예매 성공' })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
@@ -43,8 +44,8 @@ export class TicketsController {
   }
 
   @Get('my-tickets')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @UseGuards(SessionGuard)
+  @Auth()
   @ApiOperation({ summary: '내 티켓 목록 조회' })
   @ApiResponse({ status: 200, description: '티켓 목록 조회 성공' })
   @ApiQuery({ name: 'page', required: false, type: Number })
@@ -59,8 +60,8 @@ export class TicketsController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @UseGuards(SessionGuard)
+  @Auth()
   @ApiOperation({ summary: '티켓 상세 조회' })
   @ApiResponse({ status: 200, description: '티켓 상세 조회 성공' })
   async getTicketDetail(@Param('id') id: string, @CurrentUser() user: User) {
@@ -73,8 +74,8 @@ export class TicketsController {
   }
 
   @Post('cancel/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @UseGuards(SessionGuard)
+  @Auth()
   @ApiOperation({ summary: '티켓 취소' })
   @ApiResponse({ status: 200, description: '티켓 취소 성공' })
   async cancelTicket(@Param('id') id: string, @CurrentUser() user: User) {

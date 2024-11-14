@@ -13,7 +13,7 @@ export class SeatLock {
   @Index()
   seatId: string;
 
-  @ManyToOne(() => Cell, { onDelete: 'CASCADE', eager: true })
+  @ManyToOne(() => Cell, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'seatId' })
   seat: Cell;
 
@@ -28,10 +28,10 @@ export class SeatLock {
   @Column({ length: 100 })
   name: string;
 
-  @Column('timestamp with time zone')
+  @Column('datetime')
   @Index()
   expiresAt: Date;
 
-  @CreateDateColumn({ type: 'timestamp with time zone' })
+  @CreateDateColumn({ type: 'datetime' })
   createdAt: Date;
 }

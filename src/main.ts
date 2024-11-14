@@ -12,21 +12,8 @@ async function bootstrap() {
     .setDescription('암표 방지 티켓 예매 서비스 Vedge API 문서')
     .setVersion('1.0')
     .addTag('vedge')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
-      },
-      'access-token',
-    )
+    .addCookieAuth('sessionId')
     .build();
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
-  });
   app.useGlobalFilters(new RoleErrorFilter());
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document, {

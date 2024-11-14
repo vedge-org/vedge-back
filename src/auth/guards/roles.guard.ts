@@ -1,6 +1,19 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole, ROLES_KEY } from '../decorators/roles.decorator';
+import { Session } from 'express-session';
+
+interface SessionData {
+  userId: string;
+  user: {
+    role: UserRole;
+    [key: string]: any;
+  };
+}
+
+interface CustomSession extends Session {
+  data: SessionData;
+}
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -16,7 +29,13 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
-    return requiredRoles.some((role) => user.role === role);
+    const request = context.switchToHttp().getRequest();
+    const session = request.session as CustomSession;
+
+    if (!session?.data?.user) {
+      throw new UnauthorizedException('권한이 없습니다.');
+    }
+
+    return requiredRoles.some((role) => session.data.user.role === role);
   }
 }
