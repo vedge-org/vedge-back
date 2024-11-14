@@ -2,6 +2,7 @@ import { IsEnum, IsString, IsNumber, IsDate, IsOptional, IsArray, ValidateNested
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { EventCategory } from '../entities/event.entity';
+import { CreateSeatMapDto } from 'src/seats/dto/create-seat-map.dto';
 
 export class CreateEventScheduleDto {
   @IsDate()
@@ -79,4 +80,9 @@ export class CreateEventDto {
   @Type(() => CreateEventAdditionalInfoDto)
   @ApiProperty({ type: [CreateEventAdditionalInfoDto] })
   additionalInfo: CreateEventAdditionalInfoDto[];
+
+  @ValidateNested()
+  @Type(() => CreateSeatMapDto)
+  @ApiProperty({ type: CreateSeatMapDto })
+  seatMap: CreateSeatMapDto;
 }

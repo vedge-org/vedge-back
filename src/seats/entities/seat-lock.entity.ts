@@ -9,15 +9,15 @@ export class SeatLock {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('uuid')
   @Index()
   seatId: string;
 
-  @ManyToOne(() => Cell, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Cell, { onDelete: 'CASCADE', eager: true })
   @JoinColumn({ name: 'seatId' })
   seat: Cell;
 
-  @Column()
+  @Column('uuid')
   @Index()
   userId: string;
 
@@ -25,13 +25,13 @@ export class SeatLock {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column()
+  @Column({ length: 100 })
   name: string;
 
-  @Column()
+  @Column('timestamp with time zone')
   @Index()
   expiresAt: Date;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt: Date;
 }

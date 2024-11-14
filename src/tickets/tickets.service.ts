@@ -1,11 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventSchedule } from 'src/events/entities/event-schedule.entity';
 import { User } from 'src/users/entities/user.entity';
-import { Repository, Connection, EntityManager } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Ticket } from './entities/ticket.entity';
-import { differenceInHours, parseISO } from 'date-fns';
+import { differenceInHours } from 'date-fns';
 import { ReserveTicketDto } from './dto/reserve-ticket.dto';
+import { SeatsService } from '../seats/seats.service';
 
 @Injectable()
 export class TicketsService {
@@ -14,11 +15,12 @@ export class TicketsService {
     private ticketRepository: Repository<Ticket>,
     @InjectRepository(EventSchedule)
     private eventScheduleRepository: Repository<EventSchedule>,
-    private readonly connection: Connection,
+    private readonly seatsService: SeatsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async reserveTickets(reserveTicketDto: ReserveTicketDto, user: User): Promise<Ticket> {
-    const queryRunner = this.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -29,19 +31,29 @@ export class TicketsService {
       });
 
       if (!schedule) {
-        throw new Error('존재하지 않는 공연 일정입니다.');
+        throw new NotFoundException('존재하지 않는 공연 일정입니다.');
       }
 
-      const isSeatsAvailable = await this.validateSeats(queryRunner.manager, schedule.id, reserveTicketDto.seatMap);
+      const seatIds = JSON.parse(reserveTicketDto.seatMap);
+      if (!Array.isArray(seatIds)) {
+        throw new BadRequestException('잘못된 좌석 정보입니다.');
+      }
 
-      if (!isSeatsAvailable) {
-        throw new Error('이미 예매된 좌석이 포함되어 있습니다.');
+      // 좌석 서비스를 통한 검증 및 예약
+      const { isAvailable, isLocked } = await this.seatsService.validateAndLockSeats(seatIds, user.id, schedule.id);
+
+      if (!isAvailable) {
+        throw new BadRequestException('이미 예매된 좌석이 포함되어 있습니다.');
+      }
+
+      if (!isLocked) {
+        throw new BadRequestException('좌석 잠금이 없거나 만료되었습니다.');
       }
 
       const ticket = queryRunner.manager.create(Ticket, {
         eventSchedule: schedule,
         seatMap: reserveTicketDto.seatMap,
-        count: reserveTicketDto.count,
+        count: seatIds.length,
         user: user,
       });
 
@@ -83,7 +95,7 @@ export class TicketsService {
   }
 
   async cancelTicket(ticketId: string, userId: string): Promise<void> {
-    const queryRunner = this.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -94,7 +106,7 @@ export class TicketsService {
       });
 
       if (!ticket) {
-        throw new Error('취소할 수 없는 티켓입니다.');
+        throw new BadRequestException('취소할 수 없는 티켓입니다.');
       }
 
       const now = new Date();
@@ -102,8 +114,12 @@ export class TicketsService {
       const hoursDiff = differenceInHours(scheduleDate, now);
 
       if (hoursDiff < 24) {
-        throw new Error('공연 24시간 전에는 취소할 수 없습니다.');
+        throw new BadRequestException('공연 24시간 전에는 취소할 수 없습니다.');
       }
+
+      // 좌석 서비스를 통한 취소 처리
+      const seatIds = JSON.parse(ticket.seatMap);
+      await this.seatsService.unlockSeats(seatIds);
 
       ticket.cancel = true;
       await queryRunner.manager.save(ticket);
@@ -116,7 +132,7 @@ export class TicketsService {
     }
   }
 
-  async findAvailableSeats(scheduleId: string): Promise<any> {
+  async findAvailableSeats(scheduleId: string) {
     const schedule = await this.eventScheduleRepository.findOne({
       where: { id: scheduleId },
       relations: ['event'],
@@ -126,41 +142,6 @@ export class TicketsService {
       throw new NotFoundException('존재하지 않는 공연 일정입니다.');
     }
 
-    const reservedTickets = await this.ticketRepository.find({
-      where: { eventScheduleId: scheduleId, cancel: false },
-      select: ['seatMap'],
-    });
-
-    const reservedSeatsMap = new Set();
-    reservedTickets.forEach((ticket) => {
-      const seatMap = JSON.parse(ticket.seatMap);
-      seatMap.forEach((seat) => reservedSeatsMap.add(`${seat.row}-${seat.number}`));
-    });
-
-    return {
-      schedule,
-      reservedSeats: Array.from(reservedSeatsMap),
-    };
-  }
-
-  private async validateSeats(manager: EntityManager, scheduleId: string, seatMap: string): Promise<boolean> {
-    const parsedSeatMap = JSON.parse(seatMap);
-    const seatKeys = parsedSeatMap.map((seat) => `${seat.row}-${seat.number}`);
-
-    const existingTickets = await manager.find(Ticket, {
-      where: {
-        eventScheduleId: scheduleId,
-        cancel: false,
-      },
-      select: ['seatMap'],
-    });
-
-    const reservedSeats = new Set();
-    existingTickets.forEach((ticket) => {
-      const ticketSeatMap = JSON.parse(ticket.seatMap);
-      ticketSeatMap.forEach((seat) => reservedSeats.add(`${seat.row}-${seat.number}`));
-    });
-
-    return !seatKeys.some((key) => reservedSeats.has(key));
+    return this.seatsService.findAvailableSeats(scheduleId);
   }
 }

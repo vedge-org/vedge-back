@@ -18,7 +18,17 @@ export class EventsService {
   async create(createEventDto: CreateEventDto): Promise<Event> {
     const event = this.eventRepository.create({
       ...createEventDto,
-      schedule: createEventDto.schedule.map((schedule) => this.scheduleRepository.create(schedule)),
+      schedule: createEventDto.schedule.map((schedule) => {
+        const eventSchedule = this.scheduleRepository.create({
+          ...schedule,
+          seatMap: createEventDto.seatMap
+            ? {
+                sections: createEventDto.seatMap.sections,
+              }
+            : null,
+        });
+        return eventSchedule;
+      }),
     });
 
     return this.eventRepository.save(event);
@@ -35,7 +45,9 @@ export class EventsService {
     const queryBuilder = this.eventRepository
       .createQueryBuilder('event')
       .leftJoinAndSelect('event.schedule', 'schedule')
-      .leftJoinAndSelect('event.additionalInfo', 'additionalInfo');
+      .leftJoinAndSelect('event.additionalInfo', 'additionalInfo')
+      .leftJoinAndSelect('schedule.seatMap', 'seatMap')
+      .leftJoinAndSelect('seatMap.sections', 'sections');
 
     if (category) {
       queryBuilder.andWhere('event.category = :category', { category });
@@ -70,7 +82,7 @@ export class EventsService {
   async findOne(id: string): Promise<Event> {
     const event = await this.eventRepository.findOne({
       where: { id },
-      relations: ['schedule', 'additionalInfo'],
+      relations: ['schedule', 'additionalInfo', 'schedule.seatMap', 'schedule.seatMap.sections'],
     });
 
     if (!event) {
@@ -107,13 +119,35 @@ export class EventsService {
           date: Between(now, new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)), // 30일 이내
         },
       },
-      relations: ['schedule'],
+      relations: ['schedule', 'schedule.seatMap', 'schedule.seatMap.sections'],
       take: limit,
       order: {
         schedule: {
           date: 'ASC',
         },
       },
+    });
+  }
+
+  async getEventSchedule(eventId: string): Promise<EventSchedule[]> {
+    return this.scheduleRepository.find({
+      where: { event: { id: eventId } },
+      relations: ['seats', 'seatMap', 'seatMap.sections', 'seatMap.sections.columns'],
+    });
+  }
+
+  async getEventScheduleByIdRelation(scheduleId: string): Promise<EventSchedule> {
+    return this.scheduleRepository.findOne({
+      where: { id: scheduleId },
+      relations: [
+        'seats',
+        'seats.column',
+        'seats.column.section',
+        'seats.column.section.seatMap',
+        'seatMap',
+        'seatMap.sections',
+        'seatMap.sections.columns',
+      ],
     });
   }
 }

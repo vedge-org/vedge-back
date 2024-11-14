@@ -1,25 +1,24 @@
 import { EventSchedule } from 'src/events/entities/event-schedule.entity';
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  OneToMany, 
-  ManyToOne, 
-  CreateDateColumn, 
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  CreateDateColumn,
   UpdateDateColumn,
   BeforeInsert,
   BeforeUpdate,
   Check,
   Index,
-  JoinColumn
+  JoinColumn,
 } from 'typeorm';
-import { SeatStatus } from '../enums/seat-status.enum';
 
 // 좌석 타입 enum
 export enum CellType {
   SEAT = 'SEAT',
   EMPTY = 'EMPTY',
-  AISLE = 'AISLE'
+  AISLE = 'AISLE',
 }
 
 @Entity()
@@ -28,17 +27,17 @@ export class SeatMap {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ 
-    type: 'varchar', 
+  @Column({
+    type: 'varchar',
     length: 100,
-    nullable: false 
+    nullable: false,
   })
   name: string;
 
-  @OneToMany(() => Section, section => section.seatMap, {
+  @OneToMany(() => Section, (section) => section.seatMap, {
     cascade: true,
     eager: true,
-    nullable: false
+    nullable: false,
   })
   sections: Section[];
 
@@ -47,6 +46,9 @@ export class SeatMap {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => EventSchedule, (schedule) => schedule.seatMap, { onDelete: 'CASCADE' })
+  schedules: EventSchedule[];
 
   @BeforeInsert()
   @BeforeUpdate()
@@ -63,21 +65,21 @@ export class Section {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('json', { 
-    nullable: false 
+  @Column('json', {
+    nullable: false,
   })
   aisleIndex: number[];
 
-  @ManyToOne(() => SeatMap, seatMap => seatMap.sections, {
+  @ManyToOne(() => SeatMap, (seatMap) => seatMap.sections, {
     nullable: false,
-    onDelete: 'CASCADE'
+    onDelete: 'CASCADE',
   })
   seatMap: SeatMap;
 
-  @OneToMany(() => SeatColumn, column => column.section, {
+  @OneToMany(() => SeatColumn, (column) => column.section, {
     cascade: true,
     eager: true,
-    nullable: false
+    nullable: false,
   })
   columns: SeatColumn[];
 
@@ -119,19 +121,19 @@ export class SeatColumn {
     type: 'enum',
     enum: CellType,
     default: CellType.SEAT,
-    nullable: false
+    nullable: false,
   })
   type: CellType;
 
-  @ManyToOne(() => Section, section => section.columns, {
+  @ManyToOne(() => Section, (section) => section.columns, {
     nullable: false,
-    onDelete: 'CASCADE'
+    onDelete: 'CASCADE',
   })
   section: Section;
 
-  @OneToMany(() => Cell, cell => cell.column, {
+  @OneToMany(() => Cell, (cell) => cell.column, {
     cascade: true,
-    eager: true
+    eager: true,
   })
   cells: Cell[];
 
@@ -168,19 +170,19 @@ export class Cell {
     type: 'enum',
     enum: CellType,
     default: CellType.SEAT,
-    nullable: false
+    nullable: false,
   })
   type: CellType;
 
-  @Column({ 
+  @Column({
     nullable: true,
-    type: 'boolean'
+    type: 'boolean',
   })
   isAvailable: boolean;
 
-  @ManyToOne(() => SeatColumn, column => column.cells, {
+  @ManyToOne(() => SeatColumn, (column) => column.cells, {
     nullable: false,
-    onDelete: 'CASCADE'
+    onDelete: 'CASCADE',
   })
   column: SeatColumn;
 
@@ -191,7 +193,7 @@ export class Cell {
   @Index()
   eventScheduleId: string;
 
-  @ManyToOne(() => EventSchedule, (schedule) => schedule.seats, { onDelete: 'CASCADE' })
+  @ManyToOne(() => EventSchedule, (schedule) => schedule.seatMap, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'eventScheduleId' })
   eventSchedule: EventSchedule;
 
