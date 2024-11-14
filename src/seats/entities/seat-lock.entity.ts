@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { Seat } from './seat.entity';
+import { Cell } from './seat.entity';
 
 @Entity('seat_locks')
 @Index(['seatId', 'expiresAt'])
@@ -13,9 +13,9 @@ export class SeatLock {
   @Index()
   seatId: string;
 
-  @ManyToOne(() => Seat, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Cell, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'seatId' })
-  seat: Seat;
+  seat: Cell;
 
   @Column()
   @Index()

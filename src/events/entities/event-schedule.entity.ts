@@ -11,7 +11,7 @@ import {
 } from 'typeorm';
 import { Event } from './event.entity';
 import { Ticket } from '../../tickets/entities/ticket.entity';
-import { Seat } from '../../seats/entities/seat.entity';
+import { Cell } from '../../seats/entities/seat.entity';
 
 @Entity('event_schedules')
 @Index(['eventId', 'date', 'time'], { unique: true })
@@ -36,8 +36,8 @@ export class EventSchedule {
   @OneToMany(() => Ticket, (ticket) => ticket.eventSchedule)
   tickets: Ticket[];
 
-  @OneToMany(() => Seat, (seat) => seat.eventSchedule)
-  seats: Seat[];
+  @OneToMany(() => Cell, (cell) => cell.eventSchedule)
+  seats: Cell[];
 
   @CreateDateColumn()
   createdAt: Date;
