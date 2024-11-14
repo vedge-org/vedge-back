@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import Redis from 'ioredis';
+import { promisify } from 'util';
 import { Store } from 'express-session';
 
 @Injectable()
@@ -9,14 +10,21 @@ export class RedisService {
     private readonly redis: Redis,
     @Inject('SESSION_STORE')
     private readonly sessionStore: Store,
-  ) {}
+  ) {
+    // Promisify session store methods
+    this.getSession = promisify(this.sessionStore.get).bind(this.sessionStore);
+    this.setSession = promisify(this.sessionStore.set).bind(this.sessionStore);
+    this.destroySession = promisify(this.sessionStore.destroy).bind(this.sessionStore);
+    this.touchSession = promisify(this.sessionStore.touch).bind(this.sessionStore);
+  }
+
+  private getSession: (sid: string) => Promise<any>;
+  private setSession: (sid: string, session: any) => Promise<void>;
+  private destroySession: (sid: string) => Promise<void>;
+  private touchSession: (sid: string, session: any) => Promise<void>;
 
   async set(key: string, value: string, ttl?: number): Promise<void> {
-    if (ttl) {
-      await this.redis.setex(key, ttl, value);
-    } else {
-      await this.redis.set(key, value);
-    }
+    ttl ? await this.redis.setex(key, ttl, value) : await this.redis.set(key, value);
   }
 
   async get(key: string): Promise<string | null> {
@@ -28,48 +36,39 @@ export class RedisService {
   }
 
   async getSessionData(sessionId: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.sessionStore.get(sessionId, (err, session) => {
-        if (err) reject(err);
-        resolve(session);
-      });
-    });
+    return await this.getSession(sessionId);
   }
 
   async setSessionData(sessionId: string, data: any): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.sessionStore.set(sessionId, data, (err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+    await this.setSession(sessionId, data);
   }
 
-  async destroySession(sessionId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.sessionStore.destroy(sessionId, (err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+  async removeSession(sessionId: string): Promise<void> {
+    await this.destroySession(sessionId);
   }
 
-  async touchSession(sessionId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.sessionStore.touch(sessionId, {}, (err) => {
-        if (err) reject(err);
-        resolve();
-      });
-    });
+  async updateSessionTTL(sessionId: string): Promise<void> {
+    await this.touchSession(sessionId, {});
   }
 
   async exists(key: string): Promise<boolean> {
-    const exists = await this.redis.exists(key);
-    return exists === 1;
+    return (await this.redis.exists(key)) === 1;
   }
 
   async expire(key: string, seconds: number): Promise<boolean> {
-    const result = await this.redis.expire(key, seconds);
-    return result === 1;
+    return (await this.redis.expire(key, seconds)) === 1;
+  }
+
+  async scan(pattern: string): Promise<string[]> {
+    let cursor = '0';
+    const keys: string[] = [];
+
+    do {
+      const [newCursor, foundKeys] = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = newCursor;
+      keys.push(...foundKeys);
+    } while (cursor !== '0');
+
+    return keys;
   }
 }

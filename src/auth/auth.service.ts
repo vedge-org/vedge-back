@@ -5,6 +5,23 @@ import { UsersService } from 'src/users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { UserRole } from './decorators/roles.decorator';
+import { Session } from 'express-session';
+
+interface SessionData {
+  userId?: string;
+  user?: any;
+  verified?: boolean;
+  verificationType?: 'login' | 'register';
+  phoneNumber?: string;
+}
+
+export interface CustomSession extends Session {
+  data: SessionData;
+  destroy: (callback?: (err?: any) => void) => void;
+  cookie: {
+    maxAge?: number;
+  };
+}
 
 @Injectable()
 export class AuthService {
@@ -34,7 +51,6 @@ export class AuthService {
         throw new Error('너무 많은 요청입니다. 1시간 후 다시 시도해주세요.');
       }
 
-      // Session ID를 포함한 키 생성
       const verificationKey = `verification:${type}:${phoneNumber}`;
       await this.redisService.set(verificationKey, verificationCode, 300);
       await this.redisService.set(requestKey, requestCount ? (parseInt(requestCount) + 1).toString() : '1', 3600);
@@ -53,8 +69,8 @@ export class AuthService {
   async verifyPhone(
     data: VerifyCodeDto,
     type: 'login' | 'register',
-    session: Record<string, any>,
-  ): Promise<{ verified: boolean; token?: string }> {
+    session: CustomSession,
+  ): Promise<{ verified: boolean }> {
     const { phoneNumber, code } = data;
     const verificationKey = `verification:${type}:${phoneNumber}`;
 
@@ -63,27 +79,33 @@ export class AuthService {
       throw new Error(savedCode ? '잘못된 인증번호입니다.' : '인증번호가 만료되었습니다.');
     }
 
-    // 인증 성공 시 세션에 저장
-    session.verified = true;
-    session.phoneNumber = phoneNumber;
-    session.verificationType = type;
+    if (!session.data) {
+      session.data = {};
+    }
+
+    session.data.verified = true;
+    session.data.phoneNumber = phoneNumber;
+    session.data.verificationType = type;
 
     if (type === 'login') {
       const user = await this.userService.findByPhone(phoneNumber);
-      session.userId = user.id;
-      session.user = user;
+      session.data.userId = user.id;
+      session.data.user = user;
 
       await this.redisService.del(verificationKey);
-      return { verified: true };
     }
 
     return { verified: true };
   }
 
-  async register(data: RegisterDto, session: Record<string, any>): Promise<any> {
+  async register(data: RegisterDto, session: CustomSession): Promise<any> {
     const { phoneNumber, name, role = UserRole.USER } = data;
 
-    if (!session.verified || session.verificationType !== 'register' || session.phoneNumber !== phoneNumber) {
+    if (
+      !session.data?.verified ||
+      session.data?.verificationType !== 'register' ||
+      session.data?.phoneNumber !== phoneNumber
+    ) {
       throw new Error('휴대폰 인증이 필요합니다.');
     }
 
@@ -93,16 +115,15 @@ export class AuthService {
       role,
     });
 
-    // 세션 업데이트
-    session.userId = user.id;
-    session.user = user;
-    session.verified = false;
-    session.verificationType = null;
+    session.data.userId = user.id;
+    session.data.user = user;
+    session.data.verified = false;
+    session.data.verificationType = undefined;
 
     return { user };
   }
 
-  async logout(session: Record<string, any>): Promise<void> {
+  async logout(session: CustomSession): Promise<void> {
     return new Promise((resolve, reject) => {
       session.destroy((err) => {
         if (err) reject(err);
