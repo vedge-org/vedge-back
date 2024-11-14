@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { FileType } from '../type/fileType';
 
 @Entity('files')
 export class FileEntity {
@@ -12,11 +13,11 @@ export class FileEntity {
   originalName: string;
 
   @Column()
-  type: string;
-
-  @Column()
-  url: string;
+  type: FileType;
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column()
+  url: string;
 }

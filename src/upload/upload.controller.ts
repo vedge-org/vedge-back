@@ -1,23 +1,23 @@
-// upload/upload.controller.ts
-import {
-  Controller,
-  Post,
-  UseInterceptors,
-  UploadedFile,
-  UploadedFiles,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
-} from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { multerOptions } from '../multer.config';
+import { MinioService } from '../minio/minio.service';
 import { UploadService } from './upload.service';
+import { v4 as uuidv4 } from 'uuid';
+import { FileType } from './type/fileType';
 
 @ApiTags('파일 업로드')
 @Controller('upload')
 export class UploadController {
-  constructor(private readonly uploadService: UploadService) {}
+  constructor(
+    private readonly minioService: MinioService,
+    private readonly uploadService: UploadService,
+  ) {}
+
+  private generateFilename(originalname: string): string {
+    const extension = originalname.split('.').pop();
+    return `${uuidv4()}.${extension}`;
+  }
 
   @Post('poster')
   @ApiOperation({
@@ -39,24 +39,16 @@ export class UploadController {
   })
   @ApiResponse({ status: 201, description: '포스터 업로드 성공' })
   @ApiResponse({ status: 400, description: '잘못된 파일 형식 또는 크기' })
-  @UseInterceptors(FileInterceptor('file', multerOptions('poster')))
-  async uploadPoster(
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
-          new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
-        ],
-      }),
-    )
-    file: Express.Multer.File,
-  ) {
-    const fileInfo = await this.uploadService.saveFileInfo(
-      file.filename,
-      file.originalname,
-      'poster',
-      `uploads/posters/${file.filename}`,
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadPoster(@UploadedFile() file: Express.Multer.File) {
+    const filename = this.generateFilename(file.originalname);
+    const url = await this.minioService.uploadFile(
+      new File([file.buffer], file.originalname),
+      filename,
+      FileType.POSTER,
     );
+
+    const fileInfo = await this.uploadService.saveFileInfo(filename, file.originalname, FileType.POSTER, url);
 
     return {
       message: '포스터가 업로드되었습니다.',
@@ -81,14 +73,16 @@ export class UploadController {
   })
   @ApiResponse({ status: 201, description: '티켓 업로드 성공' })
   @ApiResponse({ status: 400, description: '잘못된 파일 형식 또는 크기' })
-  @UseInterceptors(FileInterceptor('file', multerOptions('ticket')))
+  @UseInterceptors(FileInterceptor('file'))
   async uploadTicket(@UploadedFile() file: Express.Multer.File) {
-    const fileInfo = await this.uploadService.saveFileInfo(
-      file.filename,
-      file.originalname,
-      'ticket',
-      `uploads/tickets/${file.filename}`,
+    const filename = this.generateFilename(file.originalname);
+    const url = await this.minioService.uploadFile(
+      new File([file.buffer], file.originalname),
+      filename,
+      FileType.TICKET,
     );
+
+    const fileInfo = await this.uploadService.saveFileInfo(filename, file.originalname, FileType.TICKET, url);
 
     return {
       message: '티켓이 업로드되었습니다.',
@@ -116,12 +110,18 @@ export class UploadController {
   })
   @ApiResponse({ status: 201, description: '다중 파일 업로드 성공' })
   @ApiResponse({ status: 400, description: '잘못된 파일 형식 또는 크기' })
-  @UseInterceptors(FilesInterceptor('files', 10, multerOptions('other')))
+  @UseInterceptors(FilesInterceptor('files', 10))
   async uploadMultipleFiles(@UploadedFiles() files: Express.Multer.File[]) {
     const uploadedFiles = await Promise.all(
-      files.map((file) =>
-        this.uploadService.saveFileInfo(file.filename, file.originalname, 'other', `uploads/others/${file.filename}`),
-      ),
+      files.map(async (file) => {
+        const filename = this.generateFilename(file.originalname);
+        const url = await this.minioService.uploadFile(
+          new File([file.buffer], file.originalname),
+          filename,
+          FileType.OTHER,
+        );
+        return this.uploadService.saveFileInfo(filename, file.originalname, FileType.OTHER, url);
+      }),
     );
 
     return {

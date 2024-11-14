@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FileEntity } from './entities/file.entity';
+import { FileType } from './type/fileType';
 
 @Injectable()
 export class UploadService {
@@ -10,7 +11,7 @@ export class UploadService {
     private fileRepository: Repository<FileEntity>,
   ) {}
 
-  async saveFileInfo(fileName: string, originalName: string, type: string, url: string): Promise<FileEntity> {
+  async saveFileInfo(fileName: string, originalName: string, type: FileType, url: string): Promise<FileEntity> {
     const fileInfo = this.fileRepository.create({
       fileName,
       originalName,
