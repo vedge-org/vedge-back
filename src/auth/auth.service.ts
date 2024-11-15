@@ -101,6 +101,8 @@ export class AuthService {
   async register(data: RegisterDto, session: CustomSession): Promise<any> {
     const { phoneNumber, name, role = UserRole.USER } = data;
 
+    console.log(session.data);
+
     if (
       !session.data?.verified ||
       session.data?.verificationType !== 'register' ||
