@@ -16,11 +16,6 @@ async function bootstrap() {
     password: process.env.REDIS_PASSWORD,
   });
 
-  app.enableCors({
-    origin: 'http://localhost:5173',
-    credentials: true,
-  });
-
   app.use(
     session({
       store: new RedisStore({
@@ -32,11 +27,24 @@ async function bootstrap() {
       name: 'sessionId',
       cookie: {
         httpOnly: true,
+        secure: false,
         sameSite: 'none',
         maxAge: 60 * 60 * 1000, // 1 hour
       },
     }),
   );
+
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Accept');
+    next();
+  });
+
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
 
   app.use((req: any, res: any, next: any) => {
     if (!req.session.data) {
