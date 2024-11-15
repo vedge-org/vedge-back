@@ -41,9 +41,9 @@ export class SeatsController {
   @ApiOperation({ summary: '예매 가능한 좌석 조회', description: '특정 공연 일정의 예매 가능한 좌석을 조회합니다.' })
   @ApiResponse({ status: 200, description: '좌석 조회 성공' })
   @ApiResponse({ status: 404, description: '일정을 찾을 수 없음' })
-  async getAvailableSeats(@Param('scheduleId') scheduleId: string) {
+  async getAvailableSeats(@Param('scheduleId') scheduleId: string, @CurrentUser() user: User) {
     try {
-      const seats = await this.seatsService.findAvailableSeats(scheduleId);
+      const seats = await this.seatsService.findAvailableSeats(scheduleId, user);
       return {
         statusCode: HttpStatus.OK,
         message: '좌석 조회 성공',
@@ -54,6 +54,25 @@ export class SeatsController {
     }
   }
 
+  @Get('available/:scheduleId/waiting')
+  @ApiOperation({
+    summary: '예매 대기 가능한 좌석',
+    description: '이미 예매된 좌석이 취소됐을 때 우선적으로 신청할 수 있도록 예매 대기 가능 좌석을 조회합니다.',
+  })
+  async getAvailableWaitListSeats(@Param('scheduleId') scheduleId: string) {
+    try {
+      const seatWaitings = await this.seatsService.findAvailableWaitListSeats(scheduleId);
+      return {
+        statusCode: HttpStatus.OK,
+        message: '예매 대기 가능 좌석 조회 성공',
+        data: seatWaitings,
+      };
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @ApiResponse({ status: 200, description: '좌석 조회 성공' })
   @Post('lock')
   @UseGuards(SessionGuard)
   @Auth()

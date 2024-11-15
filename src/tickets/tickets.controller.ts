@@ -93,8 +93,8 @@ export class TicketsController {
   @Get('available/:scheduleId')
   @ApiOperation({ summary: '예매 가능한 좌석 조회' })
   @ApiResponse({ status: 200, description: '좌석 조회 성공' })
-  async getAvailableSeats(@Param('scheduleId') scheduleId: string) {
-    const seats = await this.ticketsService.findAvailableSeats(scheduleId);
+  async getAvailableSeats(@Param('scheduleId') scheduleId: string, @CurrentUser() user: User) {
+    const seats = await this.ticketsService.findAvailableSeats(scheduleId, user);
     return {
       statusCode: HttpStatus.OK,
       message: '좌석 조회 성공',

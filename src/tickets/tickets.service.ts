@@ -39,6 +39,12 @@ export class TicketsService {
         throw new BadRequestException('잘못된 좌석 정보입니다.');
       }
 
+      const waitList = await this.seatsService.findSeatWaitListBySeatIds(schedule.id, seatIds);
+
+      if (waitList.length > 0 && !waitList.some((wait) => wait.userId === user.id)) {
+        throw new BadRequestException('대기 중인 좌석이 포함되어 있습니다.');
+      }
+
       // 좌석 서비스를 통한 검증 및 예약
       const { isAvailable, isLocked } = await this.seatsService.validateAndLockSeats(seatIds, user.id, schedule.id);
 
@@ -132,7 +138,7 @@ export class TicketsService {
     }
   }
 
-  async findAvailableSeats(scheduleId: string) {
+  async findAvailableSeats(scheduleId: string, user: User) {
     const schedule = await this.eventScheduleRepository.findOne({
       where: { id: scheduleId },
       relations: ['event'],
@@ -142,6 +148,6 @@ export class TicketsService {
       throw new NotFoundException('존재하지 않는 공연 일정입니다.');
     }
 
-    return this.seatsService.findAvailableSeats(scheduleId);
+    return this.seatsService.findAvailableSeats(scheduleId, user);
   }
 }

@@ -7,6 +7,8 @@ import { SeatLock } from './entities/seat-lock.entity';
 import { CreateSeatMapDto } from './dto/create-seat-map.dto';
 import { EventSchedule } from '../events/entities/event-schedule.entity';
 import { EventsService } from 'src/events/events.service';
+import { SeatWaitList } from './entities/seat-waiting.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class SeatsService {
@@ -17,6 +19,8 @@ export class SeatsService {
     private cellRepository: Repository<Cell>,
     @InjectRepository(SeatLock)
     private seatLockRepository: Repository<SeatLock>,
+    @InjectRepository(SeatWaitList)
+    private seatWaitingRepository: Repository<SeatWaitList>,
     private eventService: EventsService,
     private dataSource: DataSource,
   ) {}
@@ -68,14 +72,14 @@ export class SeatsService {
     }
   }
 
-  async findAvailableSeats(scheduleId: string) {
+  async findAvailableSeats(scheduleId: string, user: User) {
     const schedule = await this.eventService.getEventSchedule(scheduleId);
 
     if (!schedule) {
       throw new NotFoundException('공연 일정을 찾을 수 없습니다.');
     }
 
-    return this.cellRepository.find({
+    const cell = await this.cellRepository.find({
       where: {
         eventScheduleId: scheduleId,
         type: CellType.SEAT,
@@ -83,6 +87,37 @@ export class SeatsService {
       },
       relations: ['column', 'column.section'],
     });
+
+    const waitList = await this.seatWaitingRepository
+      .createQueryBuilder()
+      .leftJoinAndSelect('seatWaiting.cell', 'cell')
+      .groupBy('cell.id')
+      .where('cell.eventScheduleId = :scheduleId', { scheduleId })
+      .andWhere('seatWaiting.userId = :userId', { userId: user.id })
+      .getMany();
+
+    return cell.filter((seat) => {
+      if (waitList.some((waiting) => waiting.cell.id === seat.id)) {
+        if (waitList.some((waiting) => waiting.userId === user.id)) return true;
+
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  async findAvailableWaitListSeats(scheduleId: string): Promise<Cell[]> {
+    const waitList = await this.seatWaitingRepository
+      .createQueryBuilder()
+      .leftJoinAndSelect('seatWaiting.cell', 'cell')
+      .groupBy('cell.id')
+      .having('COUNT(cell.id) < 5')
+      .where('cell.eventScheduleId = :scheduleId', { scheduleId })
+      .andWhere('cell.isAvailable = :isAvailable', { isAvailable: false })
+      .getMany();
+
+    return waitList.map((waiting) => waiting.cell);
   }
 
   async unlockSeats(seatIds: string[]): Promise<boolean> {
@@ -105,6 +140,17 @@ export class SeatsService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async findSeatWaitListBySeatIds(scheduleId: string, seatIds: string[]): Promise<SeatWaitList[]> {
+    return await this.seatWaitingRepository
+      .createQueryBuilder()
+      .leftJoinAndSelect('seatWaiting.cell', 'cell')
+      .groupBy('cell.id')
+      .having('COUNT(cell.id) < 5')
+      .where('cell.eventScheduleId = :scheduleId', { scheduleId })
+      .andWhere('cell.id IN (:...seatIds)', { seatIds })
+      .getMany();
   }
 
   async validateAndLockSeats(
@@ -145,6 +191,11 @@ export class SeatsService {
 
       await queryRunner.manager.delete(SeatLock, {
         id: In(lockedSeats.map((lock) => lock.id)),
+      });
+
+      await queryRunner.manager.delete(SeatWaitList, {
+        cellId: In(seatIds),
+        userId,
       });
 
       await queryRunner.commitTransaction();
