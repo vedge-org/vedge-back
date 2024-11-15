@@ -54,6 +54,35 @@ export class SeatsService {
     }
   }
 
+  @Cron(CronExpression.EVERY_HOUR)
+  async cleanupExpiredWaitList() {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const expiredWaitList = await this.seatWaitingRepository
+        .createQueryBuilder()
+        .leftJoinAndSelect('seatWaiting.cell', 'cell')
+        .where('cell.isAvailable = :isAvailable', { isAvailable: true })
+        .andWhere('cell.updatedAt < :expiredAt', { expiredAt: new Date(Date.now() - 1000 * 60 * 5) })
+        .getMany();
+
+      if (expiredWaitList.length > 0) {
+        await queryRunner.manager.delete(SeatWaitList, {
+          id: In(expiredWaitList.map((wait) => wait.id)),
+        });
+      }
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.error('Failed to cleanup expired wait list:', error);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   async createSeatMap(createSeatMapDto: CreateSeatMapDto) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
