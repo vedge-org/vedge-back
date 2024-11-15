@@ -6,7 +6,7 @@ import { UploadService } from './upload.service';
 import { v4 as uuidv4 } from 'uuid';
 import { FileType } from './type/fileType';
 
-@ApiTags('파일 업로드')
+@ApiTags('seats')
 @Controller('upload')
 export class UploadController {
   constructor(

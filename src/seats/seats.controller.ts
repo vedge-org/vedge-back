@@ -10,7 +10,7 @@ import { LockSeatDto } from './dto/lock-seat.dto';
 import { User } from '../users/entities/user.entity';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 
-@ApiTags('좌석')
+@ApiTags('seats')
 @Controller('seats')
 export class SeatsController {
   constructor(private readonly seatsService: SeatsService) {}
