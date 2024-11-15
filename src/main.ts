@@ -16,16 +16,8 @@ async function bootstrap() {
     password: process.env.REDIS_PASSWORD,
   });
 
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Accept');
-    next();
-  });
-
   app.enableCors({
-    allowedHeaders: '*',
-    origin: '*',
+    origin: 'http://localhost:5173',
     credentials: true,
   });
 
@@ -40,7 +32,7 @@ async function bootstrap() {
       name: 'sessionId',
       cookie: {
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: 'none',
         maxAge: 60 * 60 * 1000, // 1 hour
       },
     }),

@@ -43,7 +43,7 @@ export class AuthService {
         throw new Error('가입되지 않은 휴대폰 번호입니다.');
       }
 
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationCode = Math.floor(Math.random() * 90000 + 10000).toString();
       const requestKey = `sms:count:${phoneNumber}`;
       const requestCount = await this.redisService.get(requestKey);
 

@@ -22,6 +22,7 @@ export interface CustomSession extends ExpressSession {
   cookie: {
     maxAge?: number;
   };
+  save: (callback: (err?: any) => void) => void;
 }
 
 @ApiTags('auth')
@@ -103,9 +104,26 @@ export class AuthController {
   @ApiResponse({ status: 200, description: '세션 연장 성공' })
   async extendSession(@Session() session: CustomSession) {
     if (!session.data) {
-      session.data = {};
+      throw new UnauthorizedException('세션 데이터가 없습니다.');
     }
-    session.cookie.maxAge = 60 * 60 * 1000; // 1시간으로 연장
-    return { message: '세션이 연장되었습니다.' };
+
+    // 세션 쿠키 maxAge 업데이트 (1시간)
+    session.cookie.maxAge = 60 * 60 * 1000;
+
+    // 세션 저장
+    await new Promise<void>((resolve, reject) => {
+      session.save((err) => {
+        if (err) reject(new Error('세션 저장 실패'));
+        resolve();
+      });
+    });
+
+    return {
+      cookie: {
+        originalMaxAge: session.cookie.maxAge,
+        expires: new Date(Date.now() + session.cookie.maxAge!).toISOString(),
+      },
+      data: session.data,
+    };
   }
 }
