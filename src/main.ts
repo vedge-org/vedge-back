@@ -32,12 +32,14 @@ async function bootstrap() {
       },
     }),
   );
-
   app.enableCors({
-    origin: '*',
+    origin: true,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: '*',
+    allowedHeaders: '*',
+    exposedHeaders: '*',
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   app.use((req: any, res: any, next: any) => {
