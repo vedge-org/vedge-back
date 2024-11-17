@@ -15,7 +15,15 @@ async function bootstrap() {
     port: Number(process.env.REDIS_PORT),
     password: process.env.REDIS_PASSWORD,
   });
+  app.enableCors({
+    origin: ['http://localhost:5173', 'https://vedgeweb.apne2a.algorix.cloud'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
+    methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+    exposedHeaders: ['Set-Cookie'],
+  });
 
+  // 세션 설정 수정
   app.use(
     session({
       store: new RedisStore({
@@ -23,28 +31,21 @@ async function bootstrap() {
       }),
       secret: process.env.SESSION_SECRET,
       resave: false,
-      saveUninitialized: true,
+      saveUninitialized: false,
       name: 'sessionId',
       cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
+        secure: process.env.NODE_ENV === 'production', // production에서만 true
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // production에서는 none, 개발환경에서는 lax
         maxAge: 60 * 60 * 1000, // 1 hour
+        path: '/', // 쿠키 경로 지정
+        domain:
+          process.env.NODE_ENV === 'production'
+            ? '.yourdomain.com' // production 환경에서의 도메인
+            : undefined, // 개발 환경에서는 기본값 사용
       },
     }),
   );
-
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Accept');
-    next();
-  });
-
-  app.enableCors({
-    origin: true,
-    credentials: true,
-  });
 
   app.use((req: any, res: any, next: any) => {
     if (!req.session.data) {
