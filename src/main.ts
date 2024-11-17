@@ -15,15 +15,23 @@ async function bootstrap() {
     port: Number(process.env.REDIS_PORT),
     password: process.env.REDIS_PASSWORD,
   });
+
+  // CORS를 세션 설정보다 먼저 설정
   app.enableCors({
-    origin: ['http://localhost:5173', 'https://vedgeweb.apne2a.algorix.cloud'],
+    origin: [
+      'http://localhost:3000', // 프론트엔드 개발 서버
+      'http://localhost:5173', // Vite 기본 포트
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173',
+      'https://vedgeweb.apne2a.algorix.cloud',
+      // 프로덕션 도메인들도 추가
+    ],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
-    methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
-    exposedHeaders: ['Set-Cookie'],
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'Set-Cookie'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   });
 
-  // 세션 설정 수정
+  // 세션 설정
   app.use(
     session({
       store: new RedisStore({
@@ -33,20 +41,17 @@ async function bootstrap() {
       resave: false,
       saveUninitialized: false,
       name: 'sessionId',
+      proxy: true, // 프록시 뒤에서 실행되는 경우 필요
       cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // production에서만 true
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // production에서는 none, 개발환경에서는 lax
+        secure: false, // 개발환경에서는 false로 설정
+        sameSite: 'lax', // 개발환경에서는 'lax'로 설정
         maxAge: 60 * 60 * 1000, // 1 hour
-        path: '/', // 쿠키 경로 지정
-        domain:
-          process.env.NODE_ENV === 'production'
-            ? '.yourdomain.com' // production 환경에서의 도메인
-            : undefined, // 개발 환경에서는 기본값 사용
       },
     }),
   );
 
+  // 세션 초기화 미들웨어
   app.use((req: any, res: any, next: any) => {
     if (!req.session.data) {
       req.session.data = {};
@@ -54,6 +59,7 @@ async function bootstrap() {
     next();
   });
 
+  // Swagger 설정
   const config = new DocumentBuilder()
     .setTitle('Vedge API')
     .setDescription('암표 방지 티켓 예매 서비스 Vedge API 문서')
