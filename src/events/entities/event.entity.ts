@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
 import { EventSchedule } from './event-schedule.entity';
-import { EventAdditionalInfo } from './event-additional-info.entity';
+import { EventDetailImage } from './event-detil-image.entity';
 
 export enum EventCategory {
   CONCERT = 'CONCERT',
@@ -51,12 +51,15 @@ export class Event {
   @OneToMany(() => EventSchedule, (schedule) => schedule.event)
   schedule: EventSchedule[];
 
-  @OneToMany(() => EventAdditionalInfo, (info) => info.event)
-  additionalInfo: EventAdditionalInfo[];
+  @OneToMany(() => EventDetailImage, (info) => info.event)
+  detailImages: EventDetailImage[];
 
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column()
+  color: string;
 }

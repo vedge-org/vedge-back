@@ -5,6 +5,9 @@ import { Event, EventCategory } from './entities/event.entity';
 import { EventSchedule } from './entities/event-schedule.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import axios from 'axios';
+import { extname } from 'path';
+import { promises as fs } from 'fs';
 
 @Injectable()
 export class EventsService {
@@ -15,9 +18,31 @@ export class EventsService {
     private readonly scheduleRepository: Repository<EventSchedule>,
   ) {}
 
+  async getImageColor(imageUrl: string): Promise<string> {
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const imageBuffer = response.data;
+
+    const formData = new FormData();
+    formData.append('file', imageBuffer, `image${extname(imageUrl)}`);
+
+    const colorResponse = await axios.post('https://vedgeai.apne2a.algorix.cloud/extract_dominant_color/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        accept: 'application/json',
+      },
+    });
+
+    const [r, g, b] = colorResponse.data.dominant_color;
+    return `rgba(${r},${g},${b},1)`;
+  }
+
   async create(createEventDto: CreateEventDto): Promise<Event> {
+    // 포스터 이미지 색상 추출
+    const dominantColor = await this.getImageColor(createEventDto.posterImage);
+
     const event = this.eventRepository.create({
       ...createEventDto,
+      color: dominantColor,
       schedule: createEventDto.schedule.map((schedule) => {
         const eventSchedule = this.scheduleRepository.create({
           ...schedule,
@@ -29,6 +54,11 @@ export class EventsService {
         });
         return eventSchedule;
       }),
+      detailImages: createEventDto.detailImages.map((imageUrl, index) => ({
+        imageUrl,
+        order: index + 1,
+        event: event, // Assuming event is the relationship name in EventDetailImage entity
+      })),
     });
 
     return this.eventRepository.save(event);
@@ -82,7 +112,7 @@ export class EventsService {
   async findOne(id: string): Promise<Event> {
     const event = await this.eventRepository.findOne({
       where: { id },
-      relations: ['schedule', 'additionalInfo', 'schedule.seatMap', 'schedule.seatMap.sections'],
+      relations: ['schedule', 'additionalInfo', 'schedule.seatMap', 'schedule.seatMap.sections', ''],
     });
 
     if (!event) {

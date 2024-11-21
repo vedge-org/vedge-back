@@ -15,10 +15,10 @@ export class CreateEventScheduleDto {
   time: string;
 }
 
-export class CreateEventAdditionalInfoDto {
+export class CreateEventDetailImageDto {
   @IsString()
-  @ApiProperty({ example: '공연 관련 주의사항' })
-  content: string;
+  @ApiProperty({ example: 'https://s3.bucket url' })
+  imageUrl: string;
 }
 
 export class CreateEventDto {
@@ -77,9 +77,9 @@ export class CreateEventDto {
 
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateEventAdditionalInfoDto)
-  @ApiProperty({ type: [CreateEventAdditionalInfoDto] })
-  additionalInfo: CreateEventAdditionalInfoDto[];
+  @Type(() => CreateEventDetailImageDto)
+  @ApiProperty({ type: [CreateEventDetailImageDto] })
+  detailImages: CreateEventDetailImageDto[];
 
   @ValidateNested()
   @Type(() => CreateSeatMapDto)
